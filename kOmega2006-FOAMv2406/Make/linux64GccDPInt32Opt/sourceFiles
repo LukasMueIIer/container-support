@@ -1,4 +1,0 @@
-SOURCE = \
-turbulentFluidThermoModels/turbulentFluidThermoModels.C \
-
-# sources
