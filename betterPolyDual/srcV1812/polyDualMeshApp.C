@@ -82,6 +82,9 @@ Note
 #include "topoSet.H"
 #include "processorMeshes.H"
 
+//New includes
+#include "tetMatcher.H"
+
 using namespace Foam;
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
