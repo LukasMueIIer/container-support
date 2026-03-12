@@ -1,0 +1,88 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+    | =========                 |                                                 |
+    | \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+    |  \\    /   O peration     | Version:  2.1.0                                 |
+    |   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+    |    \\/     M anipulation  |                                                 |
+    \*---------------------------------------------------------------------------*/
+    FoamFile
+    {
+        version     2.0;
+        format      ascii;
+        class       dictionary;
+        object      topoSetDict;
+    }
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+    actions
+(
+    {
+        name    DISCARD;
+        type    faceSet;
+        action  new;
+        source  patchToFace;
+        patches
+        (
+            patch1
+            patch1
+            patch1
+            patch1
+            patch1
+            patch1
+            patch1
+            patch1
+        );
+    }
+    {
+        name    inlet;
+        type    faceSet;
+        action  new;
+        source  patchToFace;
+        patches
+        (
+            patch4
+        );
+    }
+    {
+        name    inletJetPipe;
+        type    faceSet;
+        action  new;
+        source  patchToFace;
+        patches
+        (
+            patch7
+        );
+    }
+    {
+        name    outlet;
+        type    faceSet;
+        action  new;
+        source  patchToFace;
+        patches
+        (
+            patch2
+        );
+    }
+    {
+        name    wallJetPipe;
+        type    faceSet;
+        action  new;
+        source  patchToFace;
+        patches
+        (
+            patch5
+            patch6
+        );
+    }
+    {
+        name    wallOuterPipe;
+        type    faceSet;
+        action  new;
+        source  patchToFace;
+        patches
+        (
+            patch1
+            patch3
+        );
+    }
+);

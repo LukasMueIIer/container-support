@@ -1,0 +1,21 @@
+<?xml version='1.0'?>
+<!-- skewFaces -->
+<VTKFile type='PolyData' version='0.1' byte_order='LittleEndian' header_type='UInt64'>
+  <PolyData>
+    <Piece NumberOfPoints='40' NumberOfPolys='11'>
+      <Points>
+        <DataArray type='Float32' Name='Points' NumberOfComponents='3' format='binary'>
+4AEAAAAAAACdwptAGjv5vfI2cL4CqpxAGjv5vfI2cL4CqpxAtWG/vfI2cL6dwptAtWG/vfI2cL6dwptAGjv5vT9KU74CqpxAGjv5vT9KU76dwptAV1Bwvo1dNr6dwptAV1BwvtpwGb4CqpxAV1BwvtpwGb4CqpxAV1Bwvo1dNr4T5J3ADpDVPdpwGb4T5J3ADpDVPU8I+b2t/JzADpDVPU8I+b2t/JzADpDVPdpwGb4T5J3AhZ6GvoVVhb2t/JzAhZ6GvoVVhb2t/JzAV1BwvoVVhb0T5J3AV1BwvoVVhb2dwptAew+gPIVVhb0CqpxAew+gPIVVhb0CqpxAiLpDPYVVhb2dwptAiLpDPYVVhb0T5J3AV1BwvkD4Fr2t/JzAV1BwvkD4Fr2dwptAgAPGPkD4Fr2dwptAgAPGPtkVDbwCqpxAgAPGPtkVDbwCqpxAgAPGPkD4Fr2dwptAUIiFvdkVDbydwptAUIiFvafaoDwCqpxAUIiFvafaoDwCqpxAUIiFvdkVDbydwptAV1Bwvh4gRD2dwptAV1BwvnTpmz0CqpxAV1BwvnTpmz0CqpxAV1Bwvh4gRD2dwptAUIiFvdnC1T2dwptAUIiFvR/OBz4CqpxAUIiFvR/OBz4CqpxAUIiFvdnC1T0=
+        </DataArray>
+      </Points>
+      <Polys>
+        <DataArray type='Int32' Name='connectivity' format='binary'>
+wAIAAAAAAAAAAAAAAQAAAAIAAAADAAAAAAAAAAQAAAAFAAAAAQAAAAYAAAAHAAAACAAAAAkAAAAKAAAACwAAAAwAAAANAAAADgAAAA8AAAAQAAAAEQAAABIAAAATAAAAFAAAABUAAAARAAAAFgAAABcAAAAQAAAAGAAAABkAAAAaAAAAGwAAABwAAAAdAAAAHgAAAB8AAAAgAAAAIQAAACIAAAAjAAAAJAAAACUAAAAmAAAAJwAAAA==
+        </DataArray>
+        <DataArray type='Int32' Name='offsets' format='binary'>
+LAAAAAAAAAAEAAAACAAAAAwAAAAQAAAAFAAAABgAAAAcAAAAIAAAACQAAAAoAAAALAAAAA==
+        </DataArray>
+      </Polys>
+    </Piece>
+  </PolyData>
+</VTKFile>

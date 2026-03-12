@@ -1,0 +1,7 @@
+Metadata-Version: 2.4
+Name: mesh_converter
+Version: 0.1.0
+Summary: Internal tool to convert AFLR UGRID to OpenFOAM
+Requires-Dist: numpy
+Requires-Dist: scipy
+Requires-Dist: pyNastran

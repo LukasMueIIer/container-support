@@ -1,0 +1,9 @@
+README.md
+pyproject.toml
+src/mesh_converter/__init__.py
+src/mesh_converter/core.py
+src/mesh_converter.egg-info/PKG-INFO
+src/mesh_converter.egg-info/SOURCES.txt
+src/mesh_converter.egg-info/dependency_links.txt
+src/mesh_converter.egg-info/requires.txt
+src/mesh_converter.egg-info/top_level.txt

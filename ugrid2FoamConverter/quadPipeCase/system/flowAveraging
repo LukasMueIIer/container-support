@@ -1,0 +1,91 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2406                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+
+// Function objects for the evaluation of the inlet performance
+
+totalTField
+  { type exprField;
+    libs ( fieldFunctionObjects );
+    field Tt;
+    expression "T + sqr(mag(U))/(2*1004.5)";
+    dimensions [ 0 0 0 1 0 0 0 ];
+    writeControl writeTime;
+    executeControl writeTime;
+    executeInterval  1000;
+  }
+
+totalpField
+  { type exprField;
+    libs ( fieldFunctionObjects );
+    field pt;
+    expression "p * pow((Tt/T),(1.4/0.4))";
+    dimensions [ 1 -1 -2 0 0 0 0 ];
+    writeControl writeTime;
+    executeControl writeTime;
+    executeInterval  1000;
+  }
+
+outletMassFlow
+  {
+    name outlet;
+    type surfaceFieldValue;
+    libs ( "libfieldFunctionObjects.so" );
+    writeControl writeTime;
+    writeFields false;
+    log yes;
+    regionType patch;
+    fields ( phi );
+    operation sum;
+  }
+
+massAvgOutlet
+  {
+      type            surfaceFieldValue;
+      libs            (fieldFunctionObjects);
+      writeControl    writeTime;
+      log             yes;
+      writeFields     no;
+      regionType      patch;
+      name            outlet;
+      operation       weightedAverage;
+      weightField     phi;
+      fields
+      (
+   T Tt p pt U
+      );
+  }
+inletMassFlow
+  {
+    name inlet;
+    type surfaceFieldValue;
+    libs ( "libfieldFunctionObjects.so" );
+    writeControl writeTime;
+    writeFields false;
+    log yes;
+    regionType patch;
+    fields ( phi );
+    operation sum;
+  }
+
+massAvgInlet
+  {
+      type            surfaceFieldValue;
+      libs            (fieldFunctionObjects);
+      writeControl    writeTime;
+      log             yes;
+      writeFields     no;
+      regionType      patch;
+      name            inlet;
+      operation       weightedAverage;
+      weightField     phi;
+      fields
+      (
+   T Tt p pt U
+      );
+  }
+

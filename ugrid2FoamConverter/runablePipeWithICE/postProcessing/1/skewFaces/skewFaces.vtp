@@ -1,0 +1,21 @@
+<?xml version='1.0'?>
+<!-- skewFaces -->
+<VTKFile type='PolyData' version='0.1' byte_order='LittleEndian' header_type='UInt64'>
+  <PolyData>
+    <Piece NumberOfPoints='6' NumberOfPolys='2'>
+      <Points>
+        <DataArray type='Float32' Name='Points' NumberOfComponents='3' format='binary'>
+SAAAAAAAAABTBQvAd7xZviv66z6XkAvAn1pNvjP68T5tygvANjtCvkCk7z7cgAvAZcdGvvTc6j6+3gvA41E6vlyr5T6WIQzAumg4vrXF7T4=
+        </DataArray>
+      </Points>
+      <Polys>
+        <DataArray type='Int32' Name='connectivity' format='binary'>
+gAAAAAAAAAAAAAAAAQAAAAIAAAADAAAABAAAAAMAAAACAAAABQAAAA==
+        </DataArray>
+        <DataArray type='Int32' Name='offsets' format='binary'>
+CAAAAAAAAAAEAAAACAAAAA==
+        </DataArray>
+      </Polys>
+    </Piece>
+  </PolyData>
+</VTKFile>
