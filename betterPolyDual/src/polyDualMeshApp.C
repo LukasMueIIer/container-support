@@ -68,7 +68,12 @@ Note
 #define preserveNonTetCellPoints true
 // Make the edge points of all non tet cells to feature edges
 
-
+//Use the multi split for all faces that belong to a cell with high skewness or non orthogonality
+#define useQualitySplitting true
+#define skewnessLimit 0.4
+#define nonOrthoAngleLimit 50
+#define minTetVolumeLimit 1e-4
+#define aspectRatioLimit 10
 
 
 
@@ -92,6 +97,10 @@ Note
 
 //New includes
 #include "tetMatcher.H"
+#include "polyMeshTools.H"
+#include "cellAspectRatio.H"
+#include "tetrahedron.H"
+
 
 using namespace Foam;
 
@@ -102,7 +111,8 @@ using namespace Foam;
 // boundary faces become feature faces.
 void simpleMarkFeatures
 (
-    const polyMesh& mesh,
+    const fvMesh& mesh,
+    const polyMesh& meshPoly,
     const bitSet& isBoundaryEdge,
     const scalar featureAngle,
     const bool concaveMultiCells,
@@ -123,6 +133,8 @@ void simpleMarkFeatures
     labelHashSet singleCellFeaturePointSet;
     labelHashSet multiCellFeaturePointSet;
 
+    // Face centres that need inclusion in the dual mesh
+    labelHashSet featureFaceSet(mesh.nFaces());
 
     // 1. Mark all edges between patches
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -145,12 +157,206 @@ void simpleMarkFeatures
         {
             label meshEdgeI = meshEdges[edgeI];
             featureEdgeSet.insert(meshEdgeI);
-            singleCellFeaturePointSet.insert(mesh.edges()[meshEdgeI][0]);
-            singleCellFeaturePointSet.insert(mesh.edges()[meshEdgeI][1]);
+            multiCellFeaturePointSet.insert(mesh.edges()[meshEdgeI][0]);
+            multiCellFeaturePointSet.insert(mesh.edges()[meshEdgeI][1]);
         }
     }
-
     
+    //Mark all low quality cells to be devided, merging them would only result in problems
+    if(
+        useQualitySplitting
+    ){
+        scalarField faceOrthogonality;
+        scalarField nonOrthoAngle;
+        scalarField faceSkewness;
+
+        volScalarField aspectRatio(
+            IOobject
+            (
+                "aspectRatio",                                                                                                                                                                         
+                mesh.time().timeName(),
+                mesh,
+                IOobject::NO_READ,
+                IOobject::NO_WRITE,
+                IOobject::NO_REGISTER
+            ),
+            mesh,
+            dimensionedScalar(dimless, Zero)
+        );
+        volScalarField aspectRatioCell(
+            IOobject
+            (
+                "cellAspectRatio",                                                                                                                                                                         
+                mesh.time().timeName(),
+                mesh,
+                IOobject::NO_READ,
+                IOobject::NO_WRITE,
+                IOobject::NO_REGISTER
+            ),
+            mesh,
+            dimensionedScalar(dimless, Zero)
+        );
+
+        volScalarField minTetVolume
+        (
+            IOobject
+            (
+                "minTetVolume",
+                mesh.time().timeName(),
+                mesh,
+                IOobject::NO_READ,
+                IOobject::NO_WRITE,
+                IOobject::NO_REGISTER
+            ),
+            mesh,
+            dimensionedScalar("minTetVolume", dimless, GREAT),
+            fvPatchFieldBase::zeroGradientType()
+        );
+
+        scalarField cellOpenness;
+
+        faceOrthogonality = polyMeshTools::faceOrthogonality
+        (
+            mesh,
+            mesh.faceAreas(),
+            mesh.cellCentres()
+        );
+        nonOrthoAngle = radToDeg
+        (
+            Foam::acos(min(scalar(1), max(scalar(-1), faceOrthogonality)))
+        );
+        faceSkewness = polyMeshTools::faceSkewness
+        (
+            mesh,
+            mesh.points(),
+            mesh.faceCentres(),
+            mesh.faceAreas(),
+            mesh.cellCentres()
+        );
+        polyMeshTools::cellClosedness
+        (                                                                                                                                                                                             
+            mesh,
+            mesh.geometricD(),
+            mesh.faceAreas(),
+            mesh.cellVolumes(),
+            cellOpenness,
+            aspectRatio
+        );
+
+        aspectRatio.correctBoundaryConditions(); 
+
+        aspectRatioCell.ref().field() = cellAspectRatio(meshPoly);  
+
+        aspectRatioCell.correctBoundaryConditions(); 
+
+        //calc min tet vol
+        {
+            const labelList& own = mesh.faceOwner();
+            const labelList& nei = mesh.faceNeighbour();
+            const pointField& p = mesh.points();
+            forAll(own, facei)
+            {
+                const face& f = mesh.faces()[facei];
+                const point& fc = mesh.faceCentres()[facei];
+
+                {
+                    const point& ownCc = mesh.cellCentres()[own[facei]];
+                    scalar& ownVol = minTetVolume[own[facei]];
+                    forAll(f, fp)
+                    {
+                        scalar tetQual = tetPointRef
+                        (
+                            p[f[fp]],
+                            p[f.nextLabel(fp)],
+                            ownCc,
+                            fc
+                        ).quality();
+                        ownVol = min(ownVol, tetQual);
+                    }
+                }
+                if (mesh.isInternalFace(facei))
+                {
+                    const point& neiCc = mesh.cellCentres()[nei[facei]];
+                    scalar& neiVol = minTetVolume[nei[facei]];
+                    forAll(f, fp)
+                    {
+                        scalar tetQual = tetPointRef
+                        (
+                            p[f[fp]],
+                            p[f.nextLabel(fp)],
+                            fc,
+                            neiCc
+                        ).quality();
+                        neiVol = min(neiVol, tetQual);
+                    }
+                }
+            }
+
+            minTetVolume.correctBoundaryConditions();
+        }
+
+        for (label faceI = 0; faceI < mesh.faceNeighbour().size(); faceI++){
+            
+                //Get onwer an neighbour
+                label ownerCellI = mesh.faceOwner()[faceI];
+                label neighbourCellI = mesh.faceNeighbour()[faceI];
+                
+                //Check if both arent tet, so we take these faces out of the poly process
+            
+                //Check if cell is of low quality
+                bool cellIsLowQuality = false;
+
+                if(
+                    aspectRatio[ownerCellI] > aspectRatioLimit
+                    ||
+                    aspectRatio[neighbourCellI] > aspectRatioLimit
+                    ||
+                    aspectRatioCell[ownerCellI] > aspectRatioLimit
+                    ||
+                    aspectRatioCell[neighbourCellI] > aspectRatioLimit
+                    ||
+                    minTetVolume[ownerCellI] < minTetVolumeLimit
+                    ||
+                    minTetVolume[neighbourCellI] < minTetVolumeLimit
+                ){
+                    cellIsLowQuality = true;
+                    Info<< "Splitting low quality Cell:" << ownerCellI
+                            << endl;
+                }
+
+                //here the check
+
+                const face& f = mesh.faces()[faceI];
+                const labelList& fEdges = mesh.faceEdges()[faceI];
+
+                
+
+                forAll(f, fp)
+                {
+                    //check if face is of low quality or parent cell is of low quality
+                    if(
+                        (nonOrthoAngle[faceI] > nonOrthoAngleLimit)
+                        ||
+                        (faceSkewness[faceI] > skewnessLimit)
+                        ||
+                        cellIsLowQuality
+                    ){
+                                    
+                        //Info<< "Splitting low quality face:" << faceI
+                        //    << endl;
+                        singleCellFeaturePointSet.erase(f[fp]);
+                        multiCellFeaturePointSet.insert(f[fp]);
+                        featureEdgeSet.insert(fEdges[fp]);
+                        featureFaceSet.insert(faceI);
+                    }
+                
+                }
+
+        }
+
+    }
+
+
     // 1.5 Mark all edge points belonging to non tet cells
     //Should preserve the boundary layer cells
 
@@ -159,13 +365,45 @@ void simpleMarkFeatures
        // Info << mesh.faceOwner().size() << endl;
        // Info << mesh.faceNeighbour().size() << endl;
         //Loop over all Faces and check if owner or neightbour are a non tet cell
+        scalarField faceOrthogonality;
+        scalarField nonOrthoAngle;
+        scalarField faceSkewness;
+
+        if(
+            useQualitySplitting
+        ){
+            faceOrthogonality = polyMeshTools::faceOrthogonality
+                (
+                    mesh,
+                    mesh.faceAreas(),
+                    mesh.cellCentres()
+                );
+            nonOrthoAngle = radToDeg
+                (
+                    Foam::acos(min(scalar(1), max(scalar(-1), faceOrthogonality)))
+                );
+            faceSkewness = polyMeshTools::faceSkewness
+                (
+                    mesh,
+                    mesh.points(),
+                    mesh.faceCentres(),
+                    mesh.faceAreas(),
+                    mesh.cellCentres()
+                );
+
+            
+        }
+
+
+
+
         for (label faceI = 0; faceI < mesh.faceNeighbour().size(); faceI++){
             
             //Get onwer an neighbour
             label ownerCellI = mesh.faceOwner()[faceI];
             label neighbourCellI = mesh.faceNeighbour()[faceI];
             
-            //Check if one of them is a non tet cell
+            //Check if both arent tet, so we take these faces out of the poly process
             if(
                 (!tetMatcher::test(mesh,ownerCellI))
                 ||
@@ -177,17 +415,56 @@ void simpleMarkFeatures
 
                 forAll(f, fp)
                 {
+
                     // Mark point as multi cell point (since both sides of
                     // face should have different cells)
-                    singleCellFeaturePointSet.erase(f[fp]);
-                    multiCellFeaturePointSet.insert(f[fp]);
+                    if(
+                        (!tetMatcher::test(mesh,ownerCellI))
+                        &&
+                        (!tetMatcher::test(mesh,neighbourCellI))
+                    )
+                    {
+                        if(! multiCellFeaturePointSet.test(f[fp])) //prevent re adding
+                        {
+                            if(useQualitySplitting){
 
+                                if(
+                                    (nonOrthoAngle[faceI] > nonOrthoAngleLimit)
+                                    ||
+                                    (faceSkewness[faceI] > skewnessLimit)
+                                ){
+                                    
+                                    Info<< "Splitting low quality face:" << faceI
+                                        << endl;
+                                    singleCellFeaturePointSet.erase(f[fp]);
+                                    multiCellFeaturePointSet.insert(f[fp]);
+                                    featureEdgeSet.insert(fEdges[fp]);
+                                    featureFaceSet.insert(faceI);
+                                }else{
+                                    singleCellFeaturePointSet.insert(f[fp]);
+                                }
+
+                            }else{
+                                singleCellFeaturePointSet.insert(f[fp]);
+                            }
+                            //only make multiCell if we know its not on another face which is tet adjacent
+                            
+                            //multiCellFeaturePointSet.erase(f[fp]);
+                            //featureEdgeSet.insert(fEdges[fp]);
+                        }
+                    }
+                    else 
+                    {
+                        singleCellFeaturePointSet.erase(f[fp]);
+                        multiCellFeaturePointSet.insert(f[fp]);
+                        featureEdgeSet.insert(fEdges[fp]);
+                    }
                     // Make sure there are points on the edges.
-                    featureEdgeSet.insert(fEdges[fp]);
+                    //
                 }
 
             }
-
+            //Check if one of them is a non tet cell
 
         }
 
@@ -262,6 +539,8 @@ void simpleMarkFeatures
 
                 label meshEdgeI = meshTools::findEdge(mesh, v0, v1);
                 featureEdgeSet.insert(meshEdgeI);
+                multiCellFeaturePointSet.insert(mesh.edges()[meshEdgeI][0]);
+                multiCellFeaturePointSet.insert(mesh.edges()[meshEdgeI][1]);
 
                 // Check if convex or concave by looking at angle
                 // between face centres and normal
@@ -306,8 +585,7 @@ void simpleMarkFeatures
     // 3. Mark all feature faces
     // ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    // Face centres that need inclusion in the dual mesh
-    labelHashSet featureFaceSet(mesh.nBoundaryFaces());
+
     // A. boundary faces.
     for (label facei = mesh.nInternalFaces(); facei < mesh.nFaces(); facei++)
     {
@@ -519,6 +797,7 @@ int main(int argc, char *argv[])
     // Sample implementation of feature detection.
     simpleMarkFeatures
     (
+        mesh,
         mesh,
         isBoundaryEdge,
         featureAngle,
