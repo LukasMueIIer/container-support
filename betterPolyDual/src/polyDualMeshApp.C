@@ -71,10 +71,13 @@ Note
 //Use the multi split for all faces that belong to a cell with high skewness or non orthogonality
 #define useQualitySplitting true
 #define skewnessLimit 0.4
-#define nonOrthoAngleLimit 50
+#define nonOrthoAngleLimit 40
 #define minTetVolumeLimit 1e-4
-#define aspectRatioLimit 10
+#define aspectRatioLimit 20
 
+#define transitionMultiSplit true
+#define dumpFeaturesFlag false
+#define splitLevelTransition 1 //when we have a bad region how large around that do we split?
 
 
 //---------------------------------------------------------------------------
@@ -166,6 +169,9 @@ void simpleMarkFeatures
     if(
         useQualitySplitting
     ){
+        labelHashSet lowQualityPoints;
+        labelHashSet lowQualityEdges;
+
         scalarField faceOrthogonality;
         scalarField nonOrthoAngle;
         scalarField faceSkewness;
@@ -295,6 +301,7 @@ void simpleMarkFeatures
             minTetVolume.correctBoundaryConditions();
         }
 
+        //marking all low quality regions
         for (label faceI = 0; faceI < mesh.faceNeighbour().size(); faceI++){
             
                 //Get onwer an neighbour
@@ -329,8 +336,6 @@ void simpleMarkFeatures
                 const face& f = mesh.faces()[faceI];
                 const labelList& fEdges = mesh.faceEdges()[faceI];
 
-                
-
                 forAll(f, fp)
                 {
                     //check if face is of low quality or parent cell is of low quality
@@ -341,16 +346,107 @@ void simpleMarkFeatures
                         ||
                         cellIsLowQuality
                     ){
-                                    
-                        //Info<< "Splitting low quality face:" << faceI
-                        //    << endl;
+                        lowQualityPoints.insert(f[fp]);
+                        lowQualityEdges.insert(fEdges[fp]);
+                    }
+                }
+
+        }
+
+        //extend the low quality region if needed
+        label levelsLeft = splitLevelTransition;
+
+        while (levelsLeft > 0)
+        {
+            Info<< "Extending low quality region" << endl;
+            levelsLeft--;
+            labelHashSet extendedLowQualityPoints;
+            labelHashSet extendedLowQualityEdges;
+
+              //now if any part of our face is part of low quality we split it
+        for (label faceI = 0; faceI < mesh.faceNeighbour().size(); faceI++){
+            
+                //Get onwer an neighbour
+                label ownerCellI = mesh.faceOwner()[faceI];
+                label neighbourCellI = mesh.faceNeighbour()[faceI];
+                
+                //Check if both arent tet, so we take these faces out of the poly process
+            
+                //Check if cell is of low quality
+                bool lowQualityRegion = false;
+                const face& f = mesh.faces()[faceI];
+                const labelList& fEdges = mesh.faceEdges()[faceI];
+
+                forAll(f, fp)
+                {
+                    if((
+                        lowQualityPoints.found(f[fp]) 
+                        ||
+                        lowQualityEdges.found(fEdges[fp]) 
+                    ))
+                    {
+                       lowQualityRegion = true;
+                    }
+                }
+
+                if(
+                    lowQualityRegion
+                )
+                {
+                    forAll(f, fp)
+                    {
+                        extendedLowQualityPoints.insert(f[fp]);
+                        extendedLowQualityEdges.insert(fEdges[fp]);
+                    }
+                }                
+
+        }
+
+
+            lowQualityPoints = extendedLowQualityPoints;
+            lowQualityEdges = extendedLowQualityEdges;
+        }
+        
+
+        //now if any part of our face is part of low quality we split it
+        for (label faceI = 0; faceI < mesh.faceNeighbour().size(); faceI++){
+            
+                //Get onwer an neighbour
+                label ownerCellI = mesh.faceOwner()[faceI];
+                label neighbourCellI = mesh.faceNeighbour()[faceI];
+                
+                //Check if both arent tet, so we take these faces out of the poly process
+            
+                //Check if cell is of low quality
+                bool lowQualityRegion = false;
+                const face& f = mesh.faces()[faceI];
+                const labelList& fEdges = mesh.faceEdges()[faceI];
+
+                forAll(f, fp)
+                {
+                    if((
+                        lowQualityPoints.found(f[fp]) 
+                        ||
+                        lowQualityEdges.found(fEdges[fp]) 
+                    ))
+                    {
+                       lowQualityRegion = true;
+                    }
+                }
+
+                if(
+                    lowQualityRegion
+                )
+                {
+                    forAll(f, fp)
+                    {
+                        //check if face is of low quality or parent cell is of low quality
                         singleCellFeaturePointSet.erase(f[fp]);
                         multiCellFeaturePointSet.insert(f[fp]);
                         featureEdgeSet.insert(fEdges[fp]);
                         featureFaceSet.insert(faceI);
                     }
-                
-                }
+                }                
 
         }
 
@@ -432,6 +528,7 @@ void simpleMarkFeatures
                                     (nonOrthoAngle[faceI] > nonOrthoAngleLimit)
                                     ||
                                     (faceSkewness[faceI] > skewnessLimit)
+                                    || true
                                 ){
                                     
                                     Info<< "Splitting low quality face:" << faceI
@@ -467,9 +564,116 @@ void simpleMarkFeatures
             //Check if one of them is a non tet cell
 
         }
+    }
+
+    if(transitionMultiSplit) 
+    //Multi split all cells that are fully tets
+    {
+    //check for edge cases, then prefent splitting
+
+        labelHashSet transitionPointSet;
+        labelHashSet transitionEdgeSet;
+
+        for (label faceI = 0; faceI < mesh.faceNeighbour().size(); faceI++){
 
 
+            //Get onwer an neighbour
+            label ownerCellI = mesh.faceOwner()[faceI];
+            label neighbourCellI = mesh.faceNeighbour()[faceI];
+            
+            //Check for edges where only one is a tet, these must not be split
+            if(
+                (
+                    (!tetMatcher::test(mesh,ownerCellI))
+                    &&
+                    (tetMatcher::test(mesh,neighbourCellI))
+                ) 
+                ||
+                (
+                    (tetMatcher::test(mesh,ownerCellI))
+                    &&
+                    (!tetMatcher::test(mesh,neighbourCellI))
+                ) 
+            )
+            {
+                const face& f = mesh.faces()[faceI];
+                const labelList& fEdges = mesh.faceEdges()[faceI];
+                featureFaceSet.insert(faceI);
+                forAll(f, fp)
+                {
+                    Info<< "Preventing transition Split:" << faceI << endl;
+                    transitionPointSet.insert(f[fp]);
+                    transitionEdgeSet.insert(fEdges[fp]);
+                }   
 
+            }
+        }
+
+
+        for (label faceI = 0; faceI < mesh.faceNeighbour().size(); faceI++){
+
+
+            //Get onwer an neighbour
+            label ownerCellI = mesh.faceOwner()[faceI];
+            label neighbourCellI = mesh.faceNeighbour()[faceI];
+            
+            //Check for edges where only one is a tet, these must not be split
+            if(
+                (
+                    (tetMatcher::test(mesh,ownerCellI))
+                    &&
+                    (tetMatcher::test(mesh,neighbourCellI))
+                ) 
+            )
+            {
+                //Check if one of our members is in the transition set
+                bool isTransitionFace = false;
+                const face& f = mesh.faces()[faceI];
+                const labelList& fEdges = mesh.faceEdges()[faceI];
+                
+                forAll(f, fp)
+                {
+                    if((
+                        transitionPointSet.found(f[fp])
+                    ))
+                    {
+                       isTransitionFace = true;
+                    }
+                }
+
+                if(
+                    isTransitionFace
+                )
+                {
+                    Info<< "Transition Face found:" << faceI << endl;
+                    featureFaceSet.insert(faceI);
+
+                    forAll(f, fp)
+                    {
+                        if(
+                            !(
+                            transitionPointSet.found(f[fp])
+                            )
+                        )
+                        {
+                           
+                            singleCellFeaturePointSet.erase(f[fp]);
+                            multiCellFeaturePointSet.insert(f[fp]);
+                        }
+                        if(
+                           !(
+                            transitionEdgeSet.found(fEdges[fp])
+                            )
+                        )
+                        {
+                            featureEdgeSet.insert(fEdges[fp]);
+                        } 
+
+                    }
+                }
+
+            }
+        }
 
 
     }
@@ -821,14 +1025,17 @@ int main(int argc, char *argv[])
     }
 
     // Write obj files for debugging
-    /*dumpFeatures
-    (
-        mesh,
-        featureFaces,
-        featureEdges,
-        singleCellFeaturePoints,
-        multiCellFeaturePoints
-    );*/
+    if(dumpFeaturesFlag){
+        dumpFeatures
+        (
+            mesh,
+            featureFaces,
+            featureEdges,
+            singleCellFeaturePoints,
+            multiCellFeaturePoints
+        );
+    }
+    
 
 
 
