@@ -1,0 +1,88 @@
+Making dependencies: meshFixerApp.C
+wmkdepend: parse error while scanning 'meshFixer.H' ... perhaps missing a final newline
+wmkdepend: parse error while scanning 'meshFixerApp.C' ... perhaps missing a final newline
+Making dependencies: meshFixer.C
+wmkdepend: parse error while scanning 'meshFixer.H' ... perhaps missing a final newline
+wmkdepend: parse error while scanning 'meshFixer.C' ... perhaps missing a final newline
+g++ -std=c++14 -m64 -pthread -DOPENFOAM=2406 -DWM_DP -DWM_LABEL_SIZE=32 -Wall -Wextra -Wold-style-cast -Wnon-virtual-dtor -Wno-unused-parameter -Wno-invalid-offsetof -Wno-attributes -Wno-unknown-pragmas -O3  -DNoRepository -ftemplate-depth-100  -I/home/lmueller/OpenFOAM/OpenFOAM-v2406/src/finiteVolume/lnInclude -I/home/lmueller/OpenFOAM/OpenFOAM-v2406/src/meshTools/lnInclude -I/home/lmueller/OpenFOAM/OpenFOAM-v2406/src/dynamicMesh/lnInclude  -iquote. -IlnInclude -I/home/lmueller/OpenFOAM/OpenFOAM-v2406/src/OpenFOAM/lnInclude -I/home/lmueller/OpenFOAM/OpenFOAM-v2406/src/OSspecific/POSIX/lnInclude   -fPIC -c meshFixer.C -o Make/linux64GccDPInt32Opt/meshFixer.o
+meshFixer.C: In member function ‘Foam::pointVectorField Foam::meshFixer::applyRelativeGuardedMorph(const pointVectorField&, bool)’:
+meshFixer.C:730:14: warning: variable ‘useWiggle’ set but not used [-Wunused-but-set-variable]
+  730 |         bool useWiggle = false;
+      |              ^~~~~~~~~
+meshFixer.C:829:14: warning: variable ‘iterValid’ set but not used [-Wunused-but-set-variable]
+  829 |         bool iterValid = true;
+      |              ^~~~~~~~~
+meshFixer.C: In member function ‘void Foam::meshFixer::wiggleSmooth(const Foam::pointMesh&)’:
+meshFixer.C:1367:18: warning: unused variable ‘maxBounSkew’ [-Wunused-variable]
+ 1367 |     const scalar maxBounSkew = wiggleQualityControlDict_.lookupOrDefault<scalar>("maxBoundarySkewness", 20.0);
+      |                  ^~~~~~~~~~~
+meshFixer.C:1377:18: warning: unused variable ‘maxBounSkewLimit’ [-Wunused-variable]
+ 1377 |     const scalar maxBounSkewLimit   = relativeQualityControlDict_.lookupOrDefault<scalar>("maxBoundarySkewness", 20.0);
+      |                  ^~~~~~~~~~~~~~~~
+In file included from /home/lmueller/OpenFOAM/OpenFOAM-v2406/src/OpenFOAM/lnInclude/globalMeshData.H:748,
+                 from /home/lmueller/OpenFOAM/OpenFOAM-v2406/src/OpenFOAM/lnInclude/GeometricBoundaryField.C:30,
+                 from /home/lmueller/OpenFOAM/OpenFOAM-v2406/src/OpenFOAM/lnInclude/GeometricBoundaryField.H:286,
+                 from /home/lmueller/OpenFOAM/OpenFOAM-v2406/src/OpenFOAM/lnInclude/GeometricField.H:44,
+                 from /home/lmueller/OpenFOAM/OpenFOAM-v2406/src/OpenFOAM/lnInclude/GeometricScalarField.H:40,
+                 from /home/lmueller/OpenFOAM/OpenFOAM-v2406/src/OpenFOAM/lnInclude/GeometricFields.H:40,
+                 from /home/lmueller/OpenFOAM/OpenFOAM-v2406/src/finiteVolume/lnInclude/volFields.H:39,
+                 from meshFixer.H:5,
+                 from meshFixer.C:1:
+/home/lmueller/OpenFOAM/OpenFOAM-v2406/src/OpenFOAM/lnInclude/globalMeshDataTemplates.C: In instantiation of ‘static void Foam::globalMeshData::syncData(Foam::List<T>&, const labelListList&, const labelListList&, const Foam::mapDistribute&, const Foam::globalIndexAndTransform&, const CombineOp&, const TransformOp&) [with Type = Foam::Vector<double>; CombineOp = Foam::minMagSqrOp<Foam::Vector<double> >; TransformOp = Foam::mapDistribute::transform; Foam::labelListList = Foam::List<Foam::List<int> >]’:
+/home/lmueller/OpenFOAM/OpenFOAM-v2406/src/OpenFOAM/lnInclude/globalMeshDataTemplates.C:178:5:   required from ‘void Foam::globalMeshData::syncPointData(Foam::List<T>&, const CombineOp&, const TransformOp&) const [with Type = Foam::Vector<double>; CombineOp = Foam::minMagSqrOp<Foam::Vector<double> >; TransformOp = Foam::mapDistribute::transform]’
+/home/lmueller/OpenFOAM/OpenFOAM-v2406/src/OpenFOAM/lnInclude/syncToolsTemplates.C:758:36:   required from ‘static void Foam::syncTools::syncPointList(const Foam::polyMesh&, Foam::List<T>&, const CombineOp&, const T&, const TransformOp&) [with T = Foam::Vector<double>; CombineOp = Foam::minMagSqrOp<Foam::Vector<double> >; TransformOp = Foam::mapDistribute::transform]’
+/home/lmueller/OpenFOAM/OpenFOAM-v2406/src/OpenFOAM/lnInclude/syncTools.H:200:17:   required from ‘static void Foam::syncTools::syncPointList(const Foam::polyMesh&, Foam::List<T>&, const CombineOp&, const T&) [with T = Foam::Vector<double>; CombineOp = Foam::minMagSqrOp<Foam::Vector<double> >]’
+meshFixer.C:1737:29:   required from here
+/home/lmueller/OpenFOAM/OpenFOAM-v2406/src/OpenFOAM/lnInclude/globalMeshDataTemplates.C:68:13: warning: ignoring return value of ‘T Foam::minMagSqrOp<T>::operator()(const T&, const T&) const [with T = Foam::Vector<double>]’, declared with attribute ‘warn_unused_result’ [-Wunused-result]
+   68 |             cop(elem, elems[pointi]);
+      |             ^~~
+In file included from /home/lmueller/OpenFOAM/OpenFOAM-v2406/src/OpenFOAM/lnInclude/ListOps.H:55,
+                 from /home/lmueller/OpenFOAM/OpenFOAM-v2406/src/OpenFOAM/lnInclude/UPstream.H:49,
+                 from /home/lmueller/OpenFOAM/OpenFOAM-v2406/src/OpenFOAM/lnInclude/fileOperation.H:78,
+                 from /home/lmueller/OpenFOAM/OpenFOAM-v2406/src/OpenFOAM/lnInclude/IOobjectTemplates.C:31,
+                 from /home/lmueller/OpenFOAM/OpenFOAM-v2406/src/OpenFOAM/lnInclude/IOobject.H:742,
+                 from /home/lmueller/OpenFOAM/OpenFOAM-v2406/src/OpenFOAM/lnInclude/regIOobject.H:46,
+                 from /home/lmueller/OpenFOAM/OpenFOAM-v2406/src/OpenFOAM/lnInclude/objectRegistry.H:45,
+                 from /home/lmueller/OpenFOAM/OpenFOAM-v2406/src/OpenFOAM/lnInclude/polyMesh.H:47,
+                 from /home/lmueller/OpenFOAM/OpenFOAM-v2406/src/finiteVolume/lnInclude/fvMesh.H:53,
+                 from meshFixer.H:4,
+                 from meshFixer.C:1:
+/home/lmueller/OpenFOAM/OpenFOAM-v2406/src/OpenFOAM/lnInclude/ops.H:130:26: note: declared here
+  130 |         FOAM_NODISCARD T operator()(const T& x, const T& y) const              \
+      |                          ^~~~~~~~
+/home/lmueller/OpenFOAM/OpenFOAM-v2406/src/OpenFOAM/lnInclude/ops.H:220:1: note: in expansion of macro ‘Op’
+  220 | Op(minMagSqr, (magSqr(x) <= magSqr(y) ? x : y))
+      | ^~
+In file included from /home/lmueller/OpenFOAM/OpenFOAM-v2406/src/OpenFOAM/lnInclude/globalMeshData.H:748,
+                 from /home/lmueller/OpenFOAM/OpenFOAM-v2406/src/OpenFOAM/lnInclude/GeometricBoundaryField.C:30,
+                 from /home/lmueller/OpenFOAM/OpenFOAM-v2406/src/OpenFOAM/lnInclude/GeometricBoundaryField.H:286,
+                 from /home/lmueller/OpenFOAM/OpenFOAM-v2406/src/OpenFOAM/lnInclude/GeometricField.H:44,
+                 from /home/lmueller/OpenFOAM/OpenFOAM-v2406/src/OpenFOAM/lnInclude/GeometricScalarField.H:40,
+                 from /home/lmueller/OpenFOAM/OpenFOAM-v2406/src/OpenFOAM/lnInclude/GeometricFields.H:40,
+                 from /home/lmueller/OpenFOAM/OpenFOAM-v2406/src/finiteVolume/lnInclude/volFields.H:39,
+                 from meshFixer.H:5,
+                 from meshFixer.C:1:
+/home/lmueller/OpenFOAM/OpenFOAM-v2406/src/OpenFOAM/lnInclude/globalMeshDataTemplates.C:74:13: warning: ignoring return value of ‘T Foam::minMagSqrOp<T>::operator()(const T&, const T&) const [with T = Foam::Vector<double>]’, declared with attribute ‘warn_unused_result’ [-Wunused-result]
+   74 |             cop(elem, elems[pointi]);
+      |             ^~~
+In file included from /home/lmueller/OpenFOAM/OpenFOAM-v2406/src/OpenFOAM/lnInclude/ListOps.H:55,
+                 from /home/lmueller/OpenFOAM/OpenFOAM-v2406/src/OpenFOAM/lnInclude/UPstream.H:49,
+                 from /home/lmueller/OpenFOAM/OpenFOAM-v2406/src/OpenFOAM/lnInclude/fileOperation.H:78,
+                 from /home/lmueller/OpenFOAM/OpenFOAM-v2406/src/OpenFOAM/lnInclude/IOobjectTemplates.C:31,
+                 from /home/lmueller/OpenFOAM/OpenFOAM-v2406/src/OpenFOAM/lnInclude/IOobject.H:742,
+                 from /home/lmueller/OpenFOAM/OpenFOAM-v2406/src/OpenFOAM/lnInclude/regIOobject.H:46,
+                 from /home/lmueller/OpenFOAM/OpenFOAM-v2406/src/OpenFOAM/lnInclude/objectRegistry.H:45,
+                 from /home/lmueller/OpenFOAM/OpenFOAM-v2406/src/OpenFOAM/lnInclude/polyMesh.H:47,
+                 from /home/lmueller/OpenFOAM/OpenFOAM-v2406/src/finiteVolume/lnInclude/fvMesh.H:53,
+                 from meshFixer.H:4,
+                 from meshFixer.C:1:
+/home/lmueller/OpenFOAM/OpenFOAM-v2406/src/OpenFOAM/lnInclude/ops.H:130:26: note: declared here
+  130 |         FOAM_NODISCARD T operator()(const T& x, const T& y) const              \
+      |                          ^~~~~~~~
+/home/lmueller/OpenFOAM/OpenFOAM-v2406/src/OpenFOAM/lnInclude/ops.H:220:1: note: in expansion of macro ‘Op’
+  220 | Op(minMagSqr, (magSqr(x) <= magSqr(y) ? x : y))
+      | ^~
+g++ -std=c++14 -m64 -pthread -DOPENFOAM=2406 -DWM_DP -DWM_LABEL_SIZE=32 -Wall -Wextra -Wold-style-cast -Wnon-virtual-dtor -Wno-unused-parameter -Wno-invalid-offsetof -Wno-attributes -Wno-unknown-pragmas -O3  -DNoRepository -ftemplate-depth-100  -I/home/lmueller/OpenFOAM/OpenFOAM-v2406/src/finiteVolume/lnInclude -I/home/lmueller/OpenFOAM/OpenFOAM-v2406/src/meshTools/lnInclude -I/home/lmueller/OpenFOAM/OpenFOAM-v2406/src/dynamicMesh/lnInclude  -iquote. -IlnInclude -I/home/lmueller/OpenFOAM/OpenFOAM-v2406/src/OpenFOAM/lnInclude -I/home/lmueller/OpenFOAM/OpenFOAM-v2406/src/OSspecific/POSIX/lnInclude   -fPIC -c meshFixerApp.C -o Make/linux64GccDPInt32Opt/meshFixerApp.o
+g++ -std=c++14 -m64 -pthread -DOPENFOAM=2406 -DWM_DP -DWM_LABEL_SIZE=32 -Wall -Wextra -Wold-style-cast -Wnon-virtual-dtor -Wno-unused-parameter -Wno-invalid-offsetof -Wno-attributes -Wno-unknown-pragmas -O3  -DNoRepository -ftemplate-depth-100  -I/home/lmueller/OpenFOAM/OpenFOAM-v2406/src/finiteVolume/lnInclude -I/home/lmueller/OpenFOAM/OpenFOAM-v2406/src/meshTools/lnInclude -I/home/lmueller/OpenFOAM/OpenFOAM-v2406/src/dynamicMesh/lnInclude  -iquote. -IlnInclude -I/home/lmueller/OpenFOAM/OpenFOAM-v2406/src/OpenFOAM/lnInclude -I/home/lmueller/OpenFOAM/OpenFOAM-v2406/src/OSspecific/POSIX/lnInclude   -fPIC -Xlinker --add-needed -Xlinker --no-as-needed  Make/linux64GccDPInt32Opt/meshFixer.o Make/linux64GccDPInt32Opt/meshFixerApp.o -L/home/lmueller/OpenFOAM/OpenFOAM-v2406/platforms/linux64GccDPInt32Opt/lib \
+    -lfiniteVolume -lmeshTools -ldynamicMesh  -lOpenFOAM -ldl  \
+     -lm -o /home/lmueller/OpenFOAM/lmueller-v2406/platforms/linux64GccDPInt32Opt/bin/meshFixer

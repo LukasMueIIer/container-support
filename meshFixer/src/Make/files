@@ -1,0 +1,4 @@
+meshFixer.C
+meshFixerApp.C
+
+EXE = $(FOAM_USER_APPBIN)/meshFixer

@@ -1,4 +1,4 @@
 meshDualiser.C
 polyDualMeshApp.C
 
-EXE = $(FOAM_USER_APPBIN)/betterPolyDual
+EXE = $(FOAM_USER_APPBIN)/advPolyDualMesh
