@@ -12,7 +12,6 @@
 #include <filesystem>
 #include <chrono>
 #include <cctype>
-#include <iterator> // Required for std::inserter
 
 namespace fs = std::filesystem;
 
@@ -434,7 +433,7 @@ int main(int argc, char** argv) {
         std::chrono::duration<double> diff = end - start;
         std::cout << "Data loaded in " << diff.count() << " seconds.\n";
 
-        // Topological Mapping
+        // Topological Mapping (No internal -1 offsetting here anymore)
         std::map<FaceSignature, int> volSurfaceMap;
         for (size_t i = 0; i < ugrid.tris.size(); i += 3) {
             int nodes[3] = { ugrid.tris[i]-1, ugrid.tris[i+1]-1, ugrid.tris[i+2]-1 };
@@ -567,47 +566,16 @@ int main(int argc, char** argv) {
         }
 
         // ====================================================================
-        // 1. Initial Boundary ID Mapping 
-        // ====================================================================
-        int max_boundary_id = -1;
-        for (auto& f : all_faces) {
-            if (f.valid) {
-                if (f.neighbour == -1) { // External faces only
-                    FaceSignature sig(f.nodes, f.num_nodes);
-                    auto itTop = volSurfaceMap.find(sig);
-                    if (itTop != volSurfaceMap.end()) {
-                        f.boundaryId = itTop->second;
-                    } else {
-                        auto itSpa = spatialSurfMap.find(sig);
-                        if (itSpa != spatialSurfMap.end()) {
-                            f.boundaryId = itSpa->second;
-                        } else {
-                            f.boundaryId = -1; // Explicitly untagged
-                        }
-                    }
-                    if (f.boundaryId > max_boundary_id) {
-                        max_boundary_id = f.boundaryId;
-                    }
-                } else {
-                    f.boundaryId = -1; // Standard internal faces
-                }
-            }
-        }
-
-        // ====================================================================
-        // 2. Ice Interface Rematching & Edge Splitting
+        // Ice Interface Rematching (Edge Splitting)
         // ====================================================================
         if (rematchIceInterface) {
-            std::cout << "Rematching Ice Interface...\n";
-            std::vector<int> iceFacesIndex;
+            std::cout << "Rematching Ice Interface (Spatial Edge Splitting)...\n";
             std::set<int> interface_node_set;
             
-            // CRITICAL FIX: Only grab true untagged external boundaries!
-            for (size_t i = 0; i < all_faces.size(); ++i) {
-                if (all_faces[i].valid && all_faces[i].neighbour == -1 && all_faces[i].boundaryId == -1) {
-                    iceFacesIndex.push_back(i);
-                    for (int k = 0; k < all_faces[i].num_nodes; ++k) {
-                        interface_node_set.insert(all_faces[i].nodes[k]);
+            for (const auto& f : all_faces) {
+                if (f.valid && f.neighbour == -1) {
+                    for (int k = 0; k < f.num_nodes; ++k) {
+                        interface_node_set.insert(f.nodes[k]);
                     }
                 }
             }
@@ -620,110 +588,37 @@ int main(int argc, char** argv) {
             }
             
             KDTree interfaceTree(interface_coords, interface_node_ids);
-            std::map<int, std::vector<int>> interfaceNodeMembers;
             std::map<std::pair<int, int>, int> edgeSplitingIndex;
-            
             int snapped_count = 0;
-            double distToleranceSq = 1e-8;
+            double distToleranceSq = 1e-8; // 1e-4 squared
             
-            // A. Map Nodes and find Virtual Midpoints
-            for (int f_idx : iceFacesIndex) {
-                const auto& f = all_faces[f_idx];
-                for (int k = 0; k < f.num_nodes; ++k) {
-                    interfaceNodeMembers[f.nodes[k]].push_back(f_idx);
-                }
-                
-                if (f.num_nodes == 4) {
-                    Point3D pA = ugrid.nodes[f.nodes[0]];
-                    Point3D pB = ugrid.nodes[f.nodes[1]];
-                    Point3D pC = ugrid.nodes[f.nodes[2]];
-                    Point3D pD = ugrid.nodes[f.nodes[3]];
-                    
-                    Point3D v_points[5] = {
-                        (pA + pB) * 0.5, (pB + pC) * 0.5, (pC + pD) * 0.5, 
-                        (pD + pA) * 0.5, (pA + pB + pC + pD) * 0.25
-                    };
-                    
-                    for (int i = 0; i < 5; ++i) {
+            // Search for virtual midpoints
+            for (const auto& f : all_faces) {
+                if (f.valid && f.neighbour == -1 && f.num_nodes == 4) {
+                    for (int k = 0; k < 4; ++k) {
+                        int nA = f.nodes[k];
+                        int nB = f.nodes[(k + 1) % 4];
+                        
+                        Point3D pA = ugrid.nodes[nA];
+                        Point3D pB = ugrid.nodes[nB];
+                        Point3D midpoint = (pA + pB) * 0.5;
+                        
                         double dist;
-                        int found_nid = interfaceTree.nearest(v_points[i], dist);
+                        int found_nid = interfaceTree.nearest(midpoint, dist);
                         if (found_nid != -1 && (dist * dist) < distToleranceSq) {
-                            interfaceNodeMembers[found_nid].push_back(f_idx);
+                            auto key = std::make_pair(std::min(nA, nB), std::max(nA, nB));
+                            edgeSplitingIndex[key] = found_nid;
                             snapped_count++;
-                            
-                            if (i < 4) { // Edges only
-                                int n1 = f.nodes[i];
-                                int n2 = f.nodes[(i + 1) % 4];
-                                auto key = std::make_pair(std::min(n1, n2), std::max(n1, n2));
-                                edgeSplitingIndex[key] = found_nid;
-                            }
                         }
                     }
                 }
             }
             
-            // B. Topological Intersection and Merge
-            int count_no_match = 0, count_one_match = 0, count_multi_match = 0;
-            for (int f_idx : iceFacesIndex) {
-                auto& f = all_faces[f_idx];
-                if (!f.valid) continue;
-                
-                std::vector<std::set<int>> face_sets;
-                bool possible_match = true;
-                for (int k = 0; k < f.num_nodes; ++k) {
-                    if (interfaceNodeMembers.count(f.nodes[k])) {
-                        const auto& members = interfaceNodeMembers[f.nodes[k]];
-                        face_sets.emplace_back(members.begin(), members.end());
-                    } else {
-                        possible_match = false; break;
-                    }
-                }
-                
-                if (!possible_match || face_sets.empty()) {
-                    f.valid = false;
-                    count_no_match++;
-                    continue;
-                }
-                
-                std::set<int> common_faces = face_sets[0];
-                for (size_t s = 1; s < face_sets.size(); ++s) {
-                    std::set<int> intersection;
-                    std::set_intersection(common_faces.begin(), common_faces.end(),
-                                          face_sets[s].begin(), face_sets[s].end(),
-                                          std::inserter(intersection, intersection.begin()));
-                    common_faces = intersection;
-                }
-                common_faces.erase(f_idx);
-                
-                if (common_faces.empty()) {
-                    f.valid = false;
-                    count_no_match++;
-                } else if (common_faces.size() == 1) {
-                    int matched_idx = *common_faces.begin();
-                    int owner_self = f.owner;
-                    int owner_match = all_faces[matched_idx].owner;
-                    
-                    int new_owner = std::min(owner_self, owner_match);
-                    int new_neigh = std::max(owner_self, owner_match);
-                    
-                    if (new_owner != owner_self) {
-                        std::reverse(f.nodes, f.nodes + f.num_nodes);
-                    }
-                    
-                    f.owner = new_owner;
-                    f.neighbour = new_neigh;
-                    all_faces[matched_idx].valid = false;
-                    count_one_match++;
-                } else {
-                    count_multi_match++;
-                }
-            }
-            
-            // C. CRITICAL FIX: Apply Edge Splits to ALL quads globally!
-            if (!edgeSplitingIndex.empty()) {
-                std::cout << "Applying " << edgeSplitingIndex.size() << " edge splits globally...\n";
-                for (auto& f : all_faces) { // Loop over ALL faces, not just iceFaces
-                    if (f.valid && f.num_nodes == 4) {
+            // Apply splits
+            if (snapped_count > 0) {
+                std::cout << "Applying " << edgeSplitingIndex.size() << " edge splits to boundaries...\n";
+                for (auto& f : all_faces) {
+                    if (f.valid && f.num_nodes == 4) { 
                         std::vector<int> new_nodes;
                         new_nodes.reserve(8);
                         bool split_applied = false;
@@ -734,6 +629,7 @@ int main(int argc, char** argv) {
                             auto key = std::make_pair(std::min(nA, nB), std::max(nA, nB));
                             
                             new_nodes.push_back(nA);
+                            
                             if (edgeSplitingIndex.count(key)) {
                                 new_nodes.push_back(edgeSplitingIndex[key]);
                                 split_applied = true;
@@ -750,45 +646,36 @@ int main(int argc, char** argv) {
                 }
             }
         }
+        // ====================================================================
 
-        // ====================================================================
-        // 3. Untagged Boundary Fallback
-        // ====================================================================
-        // Safely catches genuine boundaries that just didn't exist in the SURF file
-        int untagged_count = 0;
-        int untagged_patch_id = max_boundary_id + 1;
+        // ID Mapping Check
         for (auto& f : all_faces) {
-            if (f.valid && f.neighbour == -1 && f.boundaryId == -1) {
-                f.boundaryId = untagged_patch_id;
-                untagged_count++;
-            }
-        }
-        if (untagged_count > 0) {
-            std::cout << "Auto-Patch: Assigned new boundary ID " << untagged_patch_id 
-                      << " to " << untagged_count << " untagged external faces.\n";
-        }
-
-        // ====================================================================
-        // 4. Final Cleanup (Safety Net)
-        // ====================================================================
-        int cleanup_count = 0;
-        for (auto& f : all_faces) {
-            if (f.valid && f.neighbour != -1 && f.boundaryId != -1) {
-                f.boundaryId = -1; // Strip boundary tags from merged interfaces
-                cleanup_count++;
+            if (f.valid) {
+                if (f.neighbour != -1) {
+                    f.boundaryId = -1; // Internal faces remain -1
+                } else {
+                    FaceSignature sig(f.nodes, f.num_nodes);
+                    auto itTop = volSurfaceMap.find(sig);
+                    if (itTop != volSurfaceMap.end()) {
+                        f.boundaryId = itTop->second;
+                    } else {
+                        auto itSpa = spatialSurfMap.find(sig);
+                        if (itSpa != spatialSurfMap.end()) {
+                            f.boundaryId = itSpa->second;
+                        } else {
+                            f.boundaryId = 0; // Absolute Fallback
+                        }
+                    }
+                }
             }
         }
 
-        // ====================================================================
-        // 5. Gather, Sort, and Write OpenFOAM Files
-        // ====================================================================
         std::vector<const Face*> valid_faces;
-        valid_faces.reserve(all_faces.size());
+        valid_faces.reserve(all_faces.size() - matched);
         for (const auto& f : all_faces) {
             if (f.valid) valid_faces.push_back(&f);
         }
 
-        // OpenFOAM Requirement: Internal faces (-1) strictly first!
         std::sort(valid_faces.begin(), valid_faces.end(), [](const Face* a, const Face* b) {
             if (a->boundaryId != b->boundaryId) return a->boundaryId < b->boundaryId;
             if (a->owner != b->owner) return a->owner < b->owner;
@@ -856,6 +743,7 @@ int main(int argc, char** argv) {
         for (const auto& [bId, count] : patch_counts) {
             std::string pName = "patch_" + std::to_string(bId);
             
+            // Exact ID lookup mapping without the +1 ambiguity
             if (tags.tags.find(bId) != tags.tags.end()) {
                 pName = tags.tags[bId];
             }
